@@ -1,0 +1,45 @@
+# ===================================================================
+# SpringBoot 3.2.5 + Kafka 学习 Demo 配置
+# 默认连接本地 localhost:9092 的 Kafka，配合下方 README 的 Docker 命令一键启动
+# ===================================================================
+server:
+  port: 8080
+
+spring:
+  application:
+    name: springboot-kafka-demo
+
+  # 【JDK21 新特性】SpringBoot 3.2+ 支持虚拟线程，开启后 Tomcat 用虚拟线程处理请求
+  # 老代码零改动即可提升 IO 密集场景吞吐量；不需要可直接删掉这段
+  threads:
+    virtual:
+      enabled: true
+
+  kafka:
+    # Kafka broker 地址（本地学习默认 localhost，集群环境用逗号分隔多个地址）
+    bootstrap-servers: localhost:9092
+
+    producer:
+      # key/value 序列化器：学习 Demo 使用字符串，简单直观
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # acks=all：所有 ISR 副本确认才算成功，可靠性最高（学习建议理解 all/1/0 区别）
+      acks: all
+      # 发送失败重试次数
+      retries: 3
+
+    consumer:
+      # 消费组 id（也可在 @KafkaListener 的 groupId 属性中覆盖）
+      group-id: demo-group
+      # 无初始 offset / offset 越界时从头开始消费，保证启动早于生产的消息也能收到
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # 关闭自动提交，改由 Listener 手动提交（配合 listener.ack-mode: manual）
+      enable-auto-commit: false
+
+    listener:
+      # 手动提交模式：业务处理完成后调用 ack.acknowledge() 才提交 offset，防止消息丢失
+      ack-mode: manual
+      # 消费并发线程数（建议 <= topic 分区数，多余的线程会空闲）
+      concurrency: 2
